@@ -1,0 +1,80 @@
+import csv
+import tkinter as tk
+from tkinter import messagebox
+
+class Roommate:
+    def __init__(self, name, percentage):
+        self.name = name
+        self.percentage = percentage
+        self.expenses = []
+    
+    def add_expense(self, description, amount):
+        self.expenses.append((description, amount))
+    
+    def total_expenses(self):
+        return sum(amount for _, amount in self.expenses)
+    
+    def __str__(self):
+        return f"{self.name} ({self.percentage}% share)"
+
+def calculate_split(total_rent, roommates):
+    rent_distribution = {}
+    for roommate in roommates:
+        rent_distribution[roommate.name] = (roommate.percentage / 100) * total_rent
+    return rent_distribution
+
+def load_roommates(filename):
+    roommates = []
+    with open(filename, mode='r') as file:
+        reader = csv.reader(file)
+        next(reader)  # Skip header
+        for row in reader:
+            name, percentage = row
+            roommates.append(Roommate(name, float(percentage)))
+    return roommates
+
+def load_expenses(filename, roommates):
+    with open(filename, mode='r') as file:
+        reader = csv.reader(file)
+        next(reader)  # Skip header
+        for row in reader:
+            name, description, amount = row
+            for roommate in roommates:
+                if roommate.name == name:
+                    roommate.add_expense(description, float(amount))
+
+def display_summary():
+    try:
+        total_rent = float(rent_entry.get())
+        roommates = load_roommates("roommates.csv")
+        load_expenses("expenses.csv", roommates)
+        rent_split = calculate_split(total_rent, roommates)
+        
+        result_text.set("\n--- Rent and Expense Summary ---\n")
+        for roommate in roommates:
+            result_text.set(result_text.get() + f"{roommate.name} owes: ${rent_split[roommate.name]:.2f}\n")
+            if roommate.expenses:
+                result_text.set(result_text.get() + "  Individual Expenses:\n")
+                for description, amount in roommate.expenses:
+                    result_text.set(result_text.get() + f"    - {description}: ${amount:.2f}\n")
+            result_text.set(result_text.get() + f"  Total personal expenses: ${roommate.total_expenses():.2f}\n\n")
+        result_text.set(result_text.get() + "--- End of Summary ---")
+    except ValueError:
+        messagebox.showerror("Input Error", "Please enter a valid rent amount.")
+
+# GUI Setup
+root = tk.Tk()
+root.title("Rent Split Calculator")
+root.geometry("500x500")
+
+tk.Label(root, text="Enter Total Rent:").pack()
+rent_entry = tk.Entry(root)
+rent_entry.pack()
+
+tk.Button(root, text="Calculate Rent Split", command=display_summary).pack()
+
+result_text = tk.StringVar()
+result_label = tk.Label(root, textvariable=result_text, justify="left")
+result_label.pack()
+
+root.mainloop()
